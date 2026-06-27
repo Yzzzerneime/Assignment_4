@@ -1,32 +1,22 @@
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from fastapi import FastAPI
+from app.api import books, categories
+from app.db.db import engine, Base
 
-from app.db.db import SessionLocal
-from app.db.crud import get_categories, get_books
-from app.db.models import Category, Book
+# Создаем таблицы при старте (если еще нет)
+Base.metadata.create_all(bind=engine)
 
-def print_books_and_categories():
-    db = SessionLocal()
-    categories = get_categories(db)
-    print("|Категории|")
-    for cat in categories:
-        print(f"ID: {cat.id}, Название: {cat.title}")
+app = FastAPI(
+    title="Book API",
+    description="API для управления книгами и категориями",
+    version="1.0.0"
+)
 
-    print("\n|Книги|")
-    books = get_books(db)
-    for book in books:
-        print(f"ID: {book.id}, Название: {book.title}, Цена: {book.price}, "
-              f"Категория: {book.category.title if book.category else '—'}")
+# Подключаем роутеры
+app.include_router(books.router)
+app.include_router(categories.router)
 
-    print("\n|Детальная информация по категориям|")
-    for cat in categories:
-        print(f"Категория: {cat.title}")
-        for book in cat.books:
-            print(f"  - {book.title} ({book.price} руб.)")
-        print()
 
-    db.close()
-
-if __name__ == "__main__":
-    print_books_and_categories()
+@app.get("/health")
+def health_check():
+    # Проверка работоспособности сервиса
+    return {"status": "ok", "message": "Сервис работает"}
